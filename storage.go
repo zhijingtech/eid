@@ -1,4 +1,4 @@
-package main
+package eid
 
 type Storage interface {
 	Load() (map[string]uint64, error)
