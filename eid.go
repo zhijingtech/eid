@@ -2,66 +2,13 @@ package eid
 
 import (
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
-type Manager struct {
-	generators map[string]*Generator
+var (
+	generators map[string]*Generator = map[string]*Generator{}
 	storage    Storage
 	mutex      sync.Mutex
-}
-
-func NewManager(s Storage) (*Manager, error) {
-	m := &Manager{
-		generators: map[string]*Generator{},
-		storage:    s,
-	}
-	if s == nil {
-		return m, nil
-	}
-
-	generators, err := s.Load()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to load stored sequence generators")
-	}
-	for k, v := range generators {
-		m.generators[k] = &Generator{key: k, seq: v}
-	}
-	return m, nil
-
-}
-
-func (m *Manager) GetGenerator(key string) *Generator {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if g, ok := m.generators[key]; ok {
-		return g
-	}
-
-	g := &Generator{key: key, seq: 0}
-	m.generators[key] = g
-	return g
-}
-
-func (m *Manager) Close() error {
-	if m.storage == nil {
-		return nil
-	}
-
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	generators := map[string]uint64{}
-	for k, v := range m.generators {
-		generators[k] = v.seq
-	}
-
-	err := m.storage.Save(generators)
-	return errors.Wrap(err, "failed to save sequence generators")
-
-}
+)
 
 type Generator struct {
 	key string
@@ -75,4 +22,54 @@ func (g *Generator) NextID() uint64 {
 
 	g.seq++
 	return g.seq
+}
+
+// 使用方如果需要对序号生成器进行持久化，可以在程序启动时加载，程序退出时保存。
+// 特别注意不要在获取序号生成器生成器之后加载，否则使用中的生成器可能被覆盖了。
+func Load(s Storage) error {
+	if s == nil {
+		return nil
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	storage = s
+	loaded, err := storage.Load()
+	if err != nil {
+		return err
+	}
+	for k, v := range loaded {
+		generators[k] = &Generator{key: k, seq: v}
+	}
+	return nil
+}
+
+func GetGenerator(key string) *Generator {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if g, ok := generators[key]; ok {
+		return g
+	}
+
+	g := &Generator{key: key, seq: 0}
+	generators[key] = g
+	return g
+}
+
+func Save() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if storage == nil {
+		return nil
+	}
+
+	saved := map[string]uint64{}
+	for k, v := range generators {
+		saved[k] = v.seq
+	}
+
+	return storage.Save(saved)
 }
