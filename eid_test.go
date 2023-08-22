@@ -7,19 +7,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerator_Manager(t *testing.T) {
+func TestGenerator(t *testing.T) {
 	g := GetGenerator(t.Name())
 	assert.Equal(t, uint64(0), g.seq)
 	id := g.NextID()
 	assert.Equal(t, uint64(1), id)
 
-	g2 := GetGenerator(t.Name())
-	assert.Equal(t, g, g2)
-	assert.Equal(t, uint64(1), g2.seq)
+	assert.Equal(t, uint64(2), NextID(t.Name()))
 
-	g3 := GetGenerator(t.Name() + "-2")
-	assert.NotEmpty(t, g, g2)
-	assert.Equal(t, uint64(0), g3.seq)
+	g2 := GetGenerator(t.Name() + "-2")
+	assert.Equal(t, uint64(0), g2.seq)
 }
 
 func TestGenerator_Storage(t *testing.T) {

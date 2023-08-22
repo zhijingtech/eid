@@ -24,6 +24,24 @@ func (g *Generator) NextID() uint64 {
 	return g.seq
 }
 
+func NextID(key string) uint64 {
+	g := GetGenerator(key)
+	return g.NextID()
+}
+
+func GetGenerator(key string) *Generator {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if g, ok := generators[key]; ok {
+		return g
+	}
+
+	g := &Generator{key: key, seq: 0}
+	generators[key] = g
+	return g
+}
+
 // 使用方如果需要对序号生成器进行持久化，可以在程序启动时加载，程序退出时保存。
 // 特别注意不要在获取序号生成器生成器之后加载，否则使用中的生成器可能被覆盖了。
 func Load(s Storage) error {
@@ -43,19 +61,6 @@ func Load(s Storage) error {
 		generators[k] = &Generator{key: k, seq: v}
 	}
 	return nil
-}
-
-func GetGenerator(key string) *Generator {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	if g, ok := generators[key]; ok {
-		return g
-	}
-
-	g := &Generator{key: key, seq: 0}
-	generators[key] = g
-	return g
 }
 
 func Save() error {
